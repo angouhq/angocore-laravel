@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# IDE
+.idea/
+.vscode/
+.fleet/
+
+# Composer
+/vendor/
+composer.phar
+.phpunit.result.cache
+.phpunit.cache/
+.phpactor.json
+.php-cs-fixer.cache
+.pint.cache
+
+# Env
+.env
+.env.local
+!.env.example
+
+# Logs
+*.log
+
+# Claude / IA local
+.claude/settings.local.json

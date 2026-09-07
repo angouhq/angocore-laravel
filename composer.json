@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
     "name": "angou/angocore-laravel",
-    "description": "Laravel client SDK for AngoCore platform (payments + mail orchestration).",
+    "description": "Laravel client SDK for AngoCore platform (payments, mail and AI orchestration).",
     "type": "library",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -26,7 +26,8 @@
             ],
             "aliases": {
                 "Angopay": "Angou\\Angocore\\Facades\\Angopay",
-                "Angomail": "Angou\\Angocore\\Facades\\Angomail"
+                "Angomail": "Angou\\Angocore\\Facades\\Angomail",
+                "Angoai": "Angou\\Angocore\\Facades\\Angoai"
             }
         }
     },

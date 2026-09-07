@@ -48,4 +48,13 @@ return [
     'timeout' => (int) env('ANGOCORE_TIMEOUT', 10),
     'retry_times' => (int) env('ANGOCORE_RETRY_TIMES', 2),
     'retry_delay_ms' => (int) env('ANGOCORE_RETRY_DELAY_MS', 200),
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI
+    |--------------------------------------------------------------------------
+    | Timeout propio de POST /v1/ai/chat: AngoCore puede tardar hasta dos
+    | llamadas al proveedor (primario + respaldo) antes de contestar.
+    */
+    'ai_timeout' => (int) env('ANGOCORE_AI_TIMEOUT', 65),
 ];

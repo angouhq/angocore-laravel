@@ -123,6 +123,40 @@ Mail::mailer('angocore')
     ->send(new OrderConfirmationMail($order));
 ```
 
+### AI
+
+`POST /v1/ai/chat` through the `Angoai` facade. AngoCore chooses the provider
+(OpenAI first, DeepSeek when OpenAI fails), meters tokens and cost per
+application, and never stores prompts unless the platform enables it. The
+key needs the `ai:chat` scope.
+
+```php
+use Angou\Angocore\Facades\Angoai;
+
+$reply = Angoai::chat([
+    ['role' => 'system', 'content' => 'Eres un asistente breve.'],
+    ['role' => 'user', 'content' => '¿Cuánto llevo en súper?'],
+], [
+    'max_tokens' => 400,
+    'temperature' => 0.2,
+    'metadata' => ['product' => 'angogasto', 'feature' => 'assistant'],
+]);
+
+$reply['content'];   // completion text
+$reply['provider'];  // 'openai' | 'deepseek'
+$reply['usage'];     // ['input_tokens' => ..., 'output_tokens' => ...]
+
+// JSON mode: decoded object under `data`, raw reply under `response`.
+$structured = Angoai::json($messages)['data'];
+
+// Just the text.
+$text = Angoai::text($messages);
+```
+
+Options: `response_format` (`text` | `json`), `max_tokens`, `temperature`,
+`metadata` (`product`, `feature`, `reference`) and `idempotency_key`.
+`ANGOCORE_AI_TIMEOUT` (default 65 s) applies only to this endpoint.
+
 ## Errors
 
 - `Angou\Angocore\Exceptions\AngocoreException` — base class.

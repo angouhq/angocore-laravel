@@ -11,6 +11,7 @@ Thumbs.db
 
 # Composer
 /vendor/
+/composer.lock
 composer.phar
 .phpunit.result.cache
 .phpunit.cache/

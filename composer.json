@@ -3,7 +3,7 @@
     "name": "angou/angocore-laravel",
     "description": "Laravel client SDK for AngoCore platform (payments, mail and AI orchestration).",
     "type": "library",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -14,9 +14,18 @@
         "symfony/mailer": "^7.0|^8.0",
         "symfony/mime": "^7.0|^8.0"
     },
+    "require-dev": {
+        "orchestra/testbench": "^11.0",
+        "pestphp/pest": "^4.0"
+    },
     "autoload": {
         "psr-4": {
             "Angou\\Angocore\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Angou\\Angocore\\Tests\\": "tests/"
         }
     },
     "extra": {
@@ -32,5 +41,13 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "scripts": {
+        "test": "pest"
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
 }

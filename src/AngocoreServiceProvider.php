@@ -25,6 +25,7 @@ final class AngocoreServiceProvider extends ServiceProvider
                 timeout: (int) config('angocore.timeout', 10),
                 retryTimes: (int) config('angocore.retry_times', 2),
                 retryDelayMs: (int) config('angocore.retry_delay_ms', 200),
+                inProgressWaitSeconds: (int) config('angocore.in_progress_wait', 15),
             );
         });
 
@@ -37,6 +38,7 @@ final class AngocoreServiceProvider extends ServiceProvider
                 environment: (string) config('angocore.environment', 'sandbox'),
                 timeout: (int) config('angocore.ai_timeout', 65),
                 retryTimes: 0,
+                inProgressWaitSeconds: (int) config('angocore.in_progress_wait', 15),
             ));
         });
 

@@ -6,12 +6,15 @@ namespace Angou\Angocore;
 
 use Angou\Angocore\Exceptions\AngocoreAuthException;
 use Angou\Angocore\Exceptions\AngocoreException;
+use Angou\Angocore\Exceptions\AngocoreIdempotencyInProgressException;
+use Angou\Angocore\Exceptions\AngocoreIdempotencyKeyReusedException;
 use Angou\Angocore\Exceptions\AngocoreRateLimitException;
 use Angou\Angocore\Exceptions\AngocoreTransportException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
 
 /**
@@ -20,6 +23,12 @@ use Illuminate\Support\Str;
  */
 class Client
 {
+    /**
+     * Pauses between resends while AngoCore still runs the first request with
+     * the same Idempotency-Key; the last one repeats until the wait runs out.
+     */
+    private const IN_PROGRESS_BACKOFF_MS = [500, 1000, 2000];
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly string $apiKey,
@@ -27,6 +36,7 @@ class Client
         private readonly int $timeout = 10,
         private readonly int $retryTimes = 2,
         private readonly int $retryDelayMs = 200,
+        private readonly int $inProgressWaitSeconds = 15,
     ) {
         if ($this->baseUrl === '') {
             throw new AngocoreException('AngoCore base URL is not configured (ANGOCORE_BASE_URL).');
@@ -60,20 +70,49 @@ class Client
      */
     public function patch(string $path, array $body, ?string $idempotencyKey = null): array
     {
-        return $this->send('patch', $path, body: $body, idempotencyKey: $idempotencyKey);
+        return $this->send('patch', $path, body: $body, idempotencyKey: $idempotencyKey ?? (string) Str::uuid());
     }
 
     /**
+     * A 409 idempotency_key_in_use means AngoCore is still running the first
+     * request with this key (typically our own retry after a timeout). Resend
+     * the same request until AngoCore replays its result or the wait runs out.
+     *
      * @param  array<string, mixed>  $body
      * @param  array<string, mixed>  $query
      * @return array<string, mixed>
      */
     private function send(string $method, string $path, array $body = [], array $query = [], ?string $idempotencyKey = null): array
     {
+        $waitedMs = 0;
+
+        for ($attempt = 0; ; $attempt++) {
+            $response = $this->dispatch($method, $path, $body, $query, $idempotencyKey);
+
+            if (! $this->isInProgress($response)) {
+                return $this->handleResponse($response);
+            }
+
+            $pauseMs = self::IN_PROGRESS_BACKOFF_MS[min($attempt, count(self::IN_PROGRESS_BACKOFF_MS) - 1)];
+            if ($waitedMs + $pauseMs > $this->inProgressWaitSeconds * 1000) {
+                return $this->handleResponse($response);
+            }
+
+            Sleep::for($pauseMs)->milliseconds();
+            $waitedMs += $pauseMs;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @param  array<string, mixed>  $query
+     */
+    private function dispatch(string $method, string $path, array $body, array $query, ?string $idempotencyKey): Response
+    {
         $request = $this->request($idempotencyKey);
 
         try {
-            $response = match ($method) {
+            return match ($method) {
                 'get' => $request->get($this->url($path), $query),
                 'post' => $request->post($this->url($path), $body),
                 'patch' => $request->patch($this->url($path), $body),
@@ -82,8 +121,11 @@ class Client
         } catch (ConnectionException $e) {
             throw new AngocoreTransportException("AngoCore connection failed: {$e->getMessage()}", 0, $e);
         }
+    }
 
-        return $this->handleResponse($response);
+    private function isInProgress(Response $response): bool
+    {
+        return $response->status() === 409 && $response->json('error.code') === 'idempotency_key_in_use';
     }
 
     private function request(?string $idempotencyKey): PendingRequest
@@ -151,6 +193,12 @@ class Client
             );
         }
 
-        throw AngocoreException::fromResponse($status, $body, "AngoCore request failed with status {$status}.");
+        $fallback = "AngoCore request failed with status {$status}.";
+
+        throw match ($body['error']['code'] ?? null) {
+            'idempotency_key_in_use' => AngocoreIdempotencyInProgressException::fromResponse($status, $body, $fallback),
+            'idempotency_key_reused' => AngocoreIdempotencyKeyReusedException::fromResponse($status, $body, $fallback),
+            default => AngocoreException::fromResponse($status, $body, $fallback),
+        };
     }
 }

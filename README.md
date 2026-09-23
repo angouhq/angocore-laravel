@@ -15,7 +15,7 @@ Add the repo as a VCS source in your `composer.json`:
         }
     ],
     "require": {
-        "angou/angocore-laravel": "^0.1"
+        "angou/angocore-laravel": "^0.4"
     }
 }
 ```
@@ -157,11 +157,34 @@ Options: `response_format` (`text` | `json`), `max_tokens`, `temperature`,
 `metadata` (`product`, `feature`, `reference`) and `idempotency_key`.
 `ANGOCORE_AI_TIMEOUT` (default 65 s) applies only to this endpoint.
 
+## Idempotency
+
+Every POST and PATCH carries an `Idempotency-Key`. AngoCore runs a request once
+per key and replays the stored result to any repeat with the same key and body.
+
+- **Pass a stable key per logical operation** when you may retry it yourself
+  (a queued job, a user clicking twice): `order:1001:charge`, `refund:txn_42`,
+  `cancel-sub:sub_7`. Without one, the SDK generates a new UUID per call, so
+  only its own retries share a key and your retries run the operation again.
+- A different body or endpoint under the same key is another operation: use a
+  new key.
+- When a request times out, the SDK retries it with the same key. If AngoCore
+  is still running the first attempt, it answers 409 `idempotency_key_in_use`;
+  the SDK then waits 0.5 s, 1 s, 2 s and every 2 s after that, and resends with
+  the same key until it gets the original result or `ANGOCORE_IN_PROGRESS_WAIT`
+  seconds pass (default 15, `0` disables the wait).
+
+```php
+$intent = Angopay::createPaymentIntent($payload, idempotencyKey: "order:{$order->id}:charge");
+```
+
 ## Errors
 
-- `Angou\Angocore\Exceptions\AngocoreException` — base class.
+- `Angou\Angocore\Exceptions\AngocoreException` — base class; every exception below extends it except `AngocoreTransportException`.
 - `AngocoreAuthException` — 401/403.
 - `AngocoreRateLimitException` — 429 (with `retryAfter`).
+- `AngocoreIdempotencyInProgressException` — AngoCore was still running the first request with this key when the wait ran out. The operation may still succeed: retry later with the same key to get its result, never with a new key.
+- `AngocoreIdempotencyKeyReusedException` — 422: the key was already used with another method, path or body.
 - `AngocoreTransportException` — 5xx / connection failure (Laravel queue retries this).
 
 ## License

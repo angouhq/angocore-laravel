@@ -51,6 +51,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Idempotency-Key en proceso
+    |--------------------------------------------------------------------------
+    | Si AngoCore responde 409 idempotency_key_in_use (la petición original con
+    | esa llave sigue corriendo, por ejemplo tras un reintento por timeout), el
+    | SDK espera 0.5 s, 1 s, 2 s y luego cada 2 s, y reenvía con la misma llave
+    | hasta recibir la respuesta original. Pasado este tope, en segundos, lanza
+    | AngocoreIdempotencyInProgressException. 0 desactiva la espera.
+    */
+    'in_progress_wait' => (int) env('ANGOCORE_IN_PROGRESS_WAIT', 15),
+
+    /*
+    |--------------------------------------------------------------------------
     | AI
     |--------------------------------------------------------------------------
     | Timeout propio de POST /v1/ai/chat: AngoCore puede tardar hasta dos

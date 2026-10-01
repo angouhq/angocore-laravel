@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static array chat(array $messages, array $options = [])
  * @method static array json(array $messages, array $options = [])
  * @method static string text(array $messages, array $options = [])
+ * @method static array research(string $instructions, string $input, array $options = [])
  *
  * @see AiService
  */

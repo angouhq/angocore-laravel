@@ -20,6 +20,8 @@ final class Ai
 {
     private const OPTIONS = ['response_format', 'max_tokens', 'temperature', 'metadata'];
 
+    private const RESEARCH_OPTIONS = ['schema', 'max_output_tokens', 'search', 'metadata'];
+
     public function __construct(private readonly Client $client) {}
 
     /**
@@ -80,5 +82,30 @@ final class Ai
     public function text(array $messages, array $options = []): string
     {
         return (string) ($this->chat($messages, $options)['content'] ?? '');
+    }
+
+    /**
+     * Web research through AngoCore (POST /v1/ai/research).
+     *
+     * @param  array<string, mixed>  $options  schema, max_output_tokens, search,
+     *                                        metadata and idempotency_key
+     * @return array<string, mixed>
+     */
+    public function research(string $instructions, string $input, array $options = []): array
+    {
+        $body = [
+            'instructions' => $instructions,
+            'input' => $input,
+        ];
+
+        foreach (self::RESEARCH_OPTIONS as $option) {
+            if (array_key_exists($option, $options) && $options[$option] !== null) {
+                $body[$option] = $options[$option];
+            }
+        }
+
+        $idempotencyKey = $options['idempotency_key'] ?? null;
+
+        return $this->client->post('ai/research', $body, is_string($idempotencyKey) ? $idempotencyKey : null);
     }
 }

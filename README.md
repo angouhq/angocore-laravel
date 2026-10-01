@@ -15,7 +15,7 @@ Add the repo as a VCS source in your `composer.json`:
         }
     ],
     "require": {
-        "angou/angocore-laravel": "^0.4"
+        "angou/angocore-laravel": "^0.5"
     }
 }
 ```
@@ -155,7 +155,30 @@ $text = Angoai::text($messages);
 
 Options: `response_format` (`text` | `json`), `max_tokens`, `temperature`,
 `metadata` (`product`, `feature`, `reference`) and `idempotency_key`.
-`ANGOCORE_AI_TIMEOUT` (default 65 s) applies only to this endpoint.
+`ANGOCORE_AI_TIMEOUT` (default 65 s) applies to the AI endpoints.
+
+For synchronous web research, use `Angoai::research()`. The API key needs the
+`ai:research` scope. Like `chat()`, it returns the response body as is, including
+`content`, `json`, `sources`, `searches`, `provider`, `model`, `usage`,
+`cost_usd` and `latency_ms` when provided by AngoCore.
+
+```php
+$research = Angoai::research(
+    'Act as a travel research assistant.',
+    'Find two hotel options in Mexico City for next weekend.',
+    [
+        'schema' => ['name' => 'quote', 'schema' => $quoteSchema],
+        'max_output_tokens' => 4000,
+        'search' => ['country' => 'MX', 'city' => 'Ciudad de México'],
+        'metadata' => ['product' => 'angogasto', 'feature' => 'goal_quote'],
+        'idempotency_key' => 'goal:123:quote',
+    ],
+);
+```
+
+Research options are `schema`, `max_output_tokens`, `search`, `metadata` and
+`idempotency_key`. The SDK discards any other options. Research errors use the
+same exception mapping as `chat()`.
 
 ## Idempotency
 

@@ -3,7 +3,7 @@
     "name": "angou/angocore-laravel",
     "description": "Laravel client SDK for AngoCore platform (payments, mail and AI orchestration).",
     "type": "library",
-    "version": "0.4.0",
+    "version": "0.5.0",
     "license": "MIT",
     "require": {
         "php": "^8.3",

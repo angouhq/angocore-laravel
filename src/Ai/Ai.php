@@ -85,6 +85,77 @@ final class Ai
     }
 
     /**
+     * Reads one or more images and answers `$prompt` as JSON. Each image is
+     * an https URL, a `data:image/...;base64` URL, a readable local file path
+     * (encoded inline), or `['url' => ..., 'detail' => 'low'|'high'|'auto']`.
+     * AngoCore takes at most 4 images of 4 MB each.
+     *
+     * @param  string|array<int, string|array{url: string, detail?: string}>  $images
+     * @param  array<string, mixed>  $options  same as json(), plus `detail`
+     *                                        applied to every image and `system`
+     *                                        for a leading system message
+     * @return array{data: array<string, mixed>, response: array<string, mixed>}
+     *
+     * @throws AngocoreException when an image cannot be read or the reply is not JSON
+     */
+    public function vision(string|array $images, string $prompt, array $options = []): array
+    {
+        $detail = $options['detail'] ?? null;
+        $parts = [['type' => 'text', 'text' => $prompt]];
+
+        foreach (is_string($images) ? [$images] : array_values($images) as $image) {
+            $parts[] = $this->imagePart($image, is_string($detail) ? $detail : null);
+        }
+
+        $messages = [];
+        if (is_string($options['system'] ?? null) && $options['system'] !== '') {
+            $messages[] = ['role' => 'system', 'content' => $options['system']];
+        }
+        $messages[] = ['role' => 'user', 'content' => $parts];
+
+        unset($options['detail'], $options['system']);
+
+        return $this->json($messages, $options);
+    }
+
+    /**
+     * @param  string|array{url: string, detail?: string}  $image
+     * @return array{type: string, image_url: array{url: string, detail?: string}}
+     */
+    private function imagePart(string|array $image, ?string $detail): array
+    {
+        if (is_array($image)) {
+            $detail = is_string($image['detail'] ?? null) ? $image['detail'] : $detail;
+            $image = (string) ($image['url'] ?? '');
+        }
+
+        $url = str_starts_with($image, 'https://') || str_starts_with($image, 'data:')
+            ? $image
+            : $this->dataUrlFromFile($image);
+
+        $part = ['type' => 'image_url', 'image_url' => ['url' => $url]];
+        if ($detail !== null) {
+            $part['image_url']['detail'] = $detail;
+        }
+
+        return $part;
+    }
+
+    private function dataUrlFromFile(string $path): string
+    {
+        if ($path === '' || ! is_file($path) || ! is_readable($path)) {
+            throw new AngocoreException("AngoCore AI vision: image must be an https URL, a data URL or a readable file, got [{$path}].");
+        }
+
+        $mime = (string) mime_content_type($path);
+        if (! str_starts_with($mime, 'image/')) {
+            throw new AngocoreException("AngoCore AI vision: [{$path}] is not an image ({$mime}).");
+        }
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+    }
+
+    /**
      * Web research through AngoCore (POST /v1/ai/research).
      *
      * @param  array<string, mixed>  $options  schema, max_output_tokens, search,

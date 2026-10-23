@@ -151,10 +151,22 @@ $structured = Angoai::json($messages)['data'];
 
 // Just the text.
 $text = Angoai::text($messages);
+
+// Vision: images in, JSON out. Each image is an https URL, a data URL,
+// a readable local file (encoded inline) or ['url' => ..., 'detail' => 'high'].
+// At most 4 images of 4 MB each per call.
+$menu = Angoai::vision(
+    $request->file('photo')->getRealPath(),
+    'Lista los platillos y precios de este menú como JSON {platillos:[{nombre, precio}]}',
+    ['metadata' => ['product' => 'antojo', 'feature' => 'menu_reader']],
+)['data'];
 ```
 
 Options: `response_format` (`text` | `json`), `max_tokens`, `temperature`,
 `metadata` (`product`, `feature`, `reference`) and `idempotency_key`.
+`vision()` also takes `detail` (`low` | `high` | `auto`, applied to every image)
+and `system` (a leading system message). Message `content` may also be a list
+of OpenAI-style parts (`text` / `image_url`) when calling `chat()` directly.
 `ANGOCORE_AI_TIMEOUT` (default 65 s) applies to the AI endpoints.
 
 For synchronous web research, use `Angoai::research()`. The API key needs the
